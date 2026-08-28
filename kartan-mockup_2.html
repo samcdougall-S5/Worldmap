@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kartan — mockup</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --deep:#0F2E34;
+    --deep-2:#17414A;
+    --deep-3:#22545E;
+    --mist:#DCE5E3;
+    --mist-dim:#9DB2B2;
+    --signal:#FFC24B;
+    --signal-dim:#B8862A;
+    --sea:#7FD1C1;
+
+    --serif: 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans: ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono: ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--deep);
+    color:var(--mist);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  /* ---------- shell ---------- */
+  .shell{display:flex;height:100dvh;width:100%}
+
+  .mapwrap{
+    position:relative;
+    flex:1 1 auto;
+    min-width:0;
+    height:100dvh;
+  }
+  #map{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    background:var(--deep-2);
+    outline:none;
+  }
+  #map.is-placing{cursor:crosshair}
+
+  .panel{
+    width:380px;
+    flex:0 0 380px;
+    background:var(--deep);
+    border-left:1px solid var(--deep-3);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  /* ---------- panel head ---------- */
+  .head{
+    padding:22px 24px 18px;
+    border-bottom:1px solid var(--deep-3);
+    flex:0 0 auto;
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--mist-dim);
+    margin:0 0 8px;
+  }
+  .wordmark{
+    font-family:var(--serif);
+    font-size:30px;
+    line-height:1;
+    margin:0;
+    font-weight:400;
+  }
+  .wordmark em{font-style:italic;color:var(--signal)}
+
+  /* ---------- scroll body ---------- */
+  .body{flex:1;overflow-y:auto;overscroll-behavior:contain}
+  .body::-webkit-scrollbar{width:8px}
+  .body::-webkit-scrollbar-thumb{background:var(--deep-3);border-radius:4px}
+
+  /* ---------- index list ---------- */
+  .index{list-style:none;margin:0;padding:8px 0}
+  .index li{margin:0}
+  .index button{
+    width:100%;
+    display:block;
+    text-align:left;
+    background:none;
+    border:0;
+    border-bottom:1px solid rgba(255,255,255,.05);
+    padding:14px 24px;
+    color:inherit;
+    font:inherit;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .index button:hover,
+  .index button:focus-visible{background:var(--deep-2)}
+  .index .nm{
+    font-family:var(--serif);
+    font-size:18px;
+    display:block;
+  }
+  .index .co{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--mist-dim);
+    letter-spacing:.04em;
+    display:block;
+    margin-top:3px;
+  }
+
+  /* ---------- entry ---------- */
+  .entry{padding:24px}
+  .entry h2{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:27px;
+    line-height:1.15;
+    margin:0 0 10px;
+  }
+  .coords{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    color:var(--signal);
+    margin:0 0 20px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--deep-3);
+  }
+  .entry p{
+    font-family:var(--serif);
+    font-size:16.5px;
+    line-height:1.62;
+    margin:0 0 15px;
+    color:#EAF0EE;
+  }
+  .back{
+    background:none;
+    border:0;
+    color:var(--mist-dim);
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    cursor:pointer;
+    padding:0 0 16px;
+  }
+  .back:hover{color:var(--signal)}
+
+  /* ---------- form ---------- */
+  .form{padding:24px}
+  .form label{
+    display:block;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--mist-dim);
+    margin:0 0 7px;
+  }
+  .form input,.form textarea{
+    width:100%;
+    background:var(--deep-2);
+    border:1px solid var(--deep-3);
+    border-radius:2px;
+    color:var(--mist);
+    padding:11px 12px;
+    font-family:var(--serif);
+    font-size:16px;
+    margin-bottom:18px;
+    resize:vertical;
+  }
+  .form input:focus,.form textarea:focus{
+    outline:2px solid var(--signal);
+    outline-offset:1px;
+    border-color:transparent;
+  }
+  .form textarea{min-height:130px;line-height:1.55}
+  .hint{
+    font-family:var(--mono);
+    font-size:11px;
+    line-height:1.5;
+    color:var(--mist-dim);
+    margin:0 0 20px;
+  }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    padding:12px 16px;
+    border-radius:2px;
+    cursor:pointer;
+    border:1px solid var(--deep-3);
+    background:var(--deep-2);
+    color:var(--mist);
+    transition:background .15s ease,color .15s ease;
+  }
+  .btn:hover{background:var(--deep-3)}
+  .btn-primary{
+    background:var(--signal);
+    border-color:var(--signal);
+    color:var(--deep);
+    font-weight:600;
+  }
+  .btn-primary:hover{background:#FFD277}
+  .btn:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+  .row{display:flex;gap:8px}
+  .row .btn{flex:1}
+
+  .foot{
+    flex:0 0 auto;
+    padding:16px 24px;
+    border-top:1px solid var(--deep-3);
+    background:var(--deep);
+  }
+  .foot .btn{width:100%}
+
+  /* ---------- the signature: the JSON emitter ---------- */
+  .emit{padding:24px}
+  .emit h3{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--signal);
+    margin:0 0 6px;
+  }
+  .emit .hint{margin-bottom:14px}
+  pre{
+    background:#08191D;
+    border:1px solid var(--deep-3);
+    border-left:2px solid var(--signal);
+    border-radius:2px;
+    padding:14px;
+    margin:0 0 16px;
+    overflow-x:auto;
+    font-family:var(--mono);
+    font-size:12px;
+    line-height:1.65;
+    color:var(--sea);
+    white-space:pre;
+  }
+  pre .k{color:var(--mist-dim)}
+  pre .s{color:var(--signal)}
+
+  /* ---------- markers ---------- */
+  .pin{
+    width:15px;height:15px;
+    border-radius:50%;
+    background:var(--signal);
+    border:2.5px solid var(--deep);
+    box-shadow:0 0 0 1px rgba(255,194,75,.55), 0 2px 5px rgba(0,0,0,.4);
+    transition:transform .18s ease;
+  }
+  .leaflet-marker-icon:hover .pin{transform:scale(1.35)}
+  .pin.is-active{
+    background:#fff;
+    box-shadow:0 0 0 6px rgba(255,194,75,.28), 0 2px 5px rgba(0,0,0,.4);
+  }
+  .pin.is-draft{
+    background:var(--sea);
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 2px rgba(127,209,193,.5)}
+    50%{box-shadow:0 0 0 10px rgba(127,209,193,0)}
+  }
+
+  .leaflet-container{background:var(--deep-2)}
+  .leaflet-marker-pane{z-index:650}
+  .leaflet-control-attribution{
+    background:rgba(15,46,52,.85)!important;
+    color:var(--mist-dim)!important;
+    font-size:10px!important;
+  }
+  .leaflet-control-attribution a{color:var(--sea)!important}
+  .leaflet-bar a{
+    background:var(--deep)!important;
+    color:var(--mist)!important;
+    border-color:var(--deep-3)!important;
+  }
+  .leaflet-bar a:hover{background:var(--deep-2)!important}
+
+  /* ---------- placing banner ---------- */
+  .banner{
+    position:absolute;
+    top:14px;left:50%;
+    transform:translateX(-50%);
+    z-index:900;
+    background:var(--signal);
+    color:var(--deep);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:9px 16px;
+    border-radius:2px;
+    box-shadow:0 3px 14px rgba(0,0,0,.45);
+    display:none;
+  }
+  .banner.on{display:block}
+
+  .tilewarn{
+    position:absolute;
+    bottom:16px;left:16px;right:16px;
+    z-index:900;
+    background:rgba(8,25,29,.92);
+    border:1px solid var(--deep-3);
+    border-left:2px solid var(--sea);
+    color:var(--mist-dim);
+    font-family:var(--mono);
+    font-size:11px;
+    line-height:1.5;
+    padding:11px 14px;
+    border-radius:2px;
+    display:none;
+  }
+  .tilewarn.on{display:block}
+
+  .toast{
+    position:fixed;
+    bottom:22px;left:50%;
+    transform:translateX(-50%) translateY(12px);
+    background:var(--sea);
+    color:var(--deep);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:10px 18px;
+    border-radius:2px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease,transform .2s ease;
+    z-index:1200;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- mobile: panel becomes a sheet ---------- */
+  @media (max-width:820px){
+    .shell{flex-direction:column}
+    .mapwrap{height:52dvh;flex:0 0 52dvh}
+    .panel{
+      width:100%;
+      flex:1 1 auto;
+      border-left:0;
+      border-top:1px solid var(--deep-3);
+    }
+    .head{padding:16px 18px 14px}
+    .wordmark{font-size:24px}
+    .entry,.form,.emit{padding:18px}
+    .index button{padding:13px 18px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div class="banner" id="banner">Klicka på kartan för att sätta nålen</div>
+    <div class="tilewarn" id="tilewarn">
+      Kartrutorna blockeras här. Nålarna fungerar — bakgrunden laddar när sidan ligger på Vercel.
+    </div>
+  </div>
+
+  <aside class="panel">
+    <div class="head">
+      <p class="eyebrow">Ingen databas · 6 platser</p>
+      <h1 class="wordmark">Var vi <em>varit</em></h1>
+    </div>
+    <div class="body" id="body"></div>
+    <div class="foot" id="foot"></div>
+  </aside>
+</div>
+
+<div class="toast" id="toast">Kopierat</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* =====================================================================
+   DETTA ÄR "DATABASEN".
+   I skarpt läge bor den i src/data/platser.json och importeras rakt in.
+   Ny plats = ny rad här + commit + push. Vercel bygger om automatiskt.
+   ===================================================================== */
+const PLATSER = [
+  {
+    id: "tylosand",
+    namn: "Tylösand",
+    lat: 56.6486, lng: 12.7256,
+    text: "Utgångspunkten. Vi har varit här så många gånger att det knappt räknas som en plats längre, mer som ett vardagsrum med sand. Bäst i oktober när alla andra har åkt hem och man har hela stranden för sig själv."
+  },
+  {
+    id: "porto",
+    namn: "Porto",
+    lat: 41.1408, lng: -8.6116,
+    text: "Trapporna. Ingen varnade oss för trapporna. I övrigt: fyra dagar, elva restauranger, noll ånger. Vi kom överens om att åka tillbaka i november och sen har vi inte pratat om det sen dess."
+  },
+  {
+    id: "lofoten",
+    namn: "Reine, Lofoten",
+    lat: 67.9330, lng: 13.0880,
+    text: "Kört i sjutton timmar för att komma hit och sen stod vi bara tysta i en kvart. Det var värt varenda mil. Ta med regnkläder även om prognosen säger något annat, prognosen ljuger här uppe."
+  },
+  {
+    id: "prag",
+    namn: "Prag",
+    lat: 50.0875, lng: 14.4213,
+    text: "Vi hittade en källarbar utan skylt någonstans bakom Karlsbron och har aldrig lyckats hitta tillbaka dit. Om någon minns gatan, skriv in den här."
+  },
+  {
+    id: "skagen",
+    namn: "Skagen",
+    lat: 57.7208, lng: 10.5836,
+    text: "Där två hav möts och man kan stå med en fot i vardera. Turistigt på gränsen till pinsamt, och ändå gjorde vi allihop exakt samma bild."
+  },
+  {
+    id: "sansebastian",
+    namn: "San Sebastián",
+    lat: 43.3183, lng: -1.9812,
+    text: "Pintxos-rundan gick fel väg runt och vi började med den bästa baren först. Lärdom: börja i utkanten och jobba dig inåt mot Parte Vieja."
+  }
+];
+
+/* --------------------------------------------------------------- */
+const fmt = (lat, lng) =>
+  `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lng).toFixed(4)}°${lng >= 0 ? "E" : "W"}`;
+
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+const state = { platser: [...PLATSER], vald: null, laege: "index", utkast: null };
+
+const map = L.map("map", { zoomControl: true, worldCopyJump: true })
+  .setView([54.5, 6], 4);
+
+/* Leaflet mäter containern vid start. Ligger den i flex hinner den ibland
+   mätas till 0px hög, och då ritas inga rutor alls. invalidateSize tvingar
+   om mätningen när layouten faktiskt är klar. */
+function maetOm() { map.invalidateSize(); }
+window.addEventListener("resize", maetOm);
+window.addEventListener("load", () => setTimeout(maetOm, 60));
+setTimeout(maetOm, 120);
+setTimeout(maetOm, 500);
+
+/* Faller tillbaka på OSM om CARTO är blockerat, och säger till om båda är det. */
+const KAELLOR = [
+  { url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    /* Esri lägger ortnamnen i ett eget lager ovanpå. Utan detta får du
+       en snygg men helt namnlös karta. */
+    etiketter: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap', maxZoom: 16 },
+  { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; OpenStreetMap', maxZoom: 19 }
+];
+
+let kaellaIdx = 0, lager = null, etikettLager = null, fel = 0;
+
+function laddaKaella(i) {
+  if (lager) map.removeLayer(lager);
+  if (etikettLager) { map.removeLayer(etikettLager); etikettLager = null; }
+  fel = 0;
+  const k = KAELLOR[i];
+  lager = L.tileLayer(k.url, { attribution: k.attribution, maxZoom: k.maxZoom || 19 });
+  lager.on("tileerror", () => {
+    fel++;
+    if (fel < 4) return;
+    if (i + 1 < KAELLOR.length) { kaellaIdx = i + 1; laddaKaella(kaellaIdx); }
+    else document.getElementById("tilewarn").classList.add("on");
+  });
+  lager.on("tileload", () => {
+    document.getElementById("tilewarn").classList.remove("on");
+  });
+  lager.addTo(map);
+
+  if (k.etiketter) {
+    etikettLager = L.tileLayer(k.etiketter, { maxZoom: k.maxZoom || 19, pane: "overlayPane" });
+    etikettLager.addTo(map);
+  }
+}
+laddaKaella(0);
+
+const markers = {};
+let utkastMarker = null;
+
+function ikon(active) {
+  return L.divIcon({
+    className: "",
+    html: `<div class="pin${active ? " is-active" : ""}"></div>`,
+    iconSize: [15, 15],
+    iconAnchor: [7.5, 7.5]
+  });
+}
+
+function ritaMarkers() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  state.platser.forEach(p => {
+    const m = L.marker([p.lat, p.lng], {
+      icon: ikon(state.vald === p.id),
+      keyboard: true,
+      title: p.namn
+    }).addTo(map);
+    m.on("click", () => visa(p.id));
+    markers[p.id] = m;
+  });
+}
+
+function visa(id) {
+  state.vald = id;
+  state.laege = "entry";
+  const p = state.platser.find(x => x.id === id);
+  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 6), { duration: .7 });
+  ritaMarkers();
+  render();
+}
+
+/* ---------- lägg till ---------- */
+function startaPlacering() {
+  state.laege = "placera";
+  document.getElementById("map").classList.add("is-placing");
+  document.getElementById("banner").classList.add("on");
+  render();
+}
+
+map.on("click", e => {
+  if (state.laege !== "placera") return;
+  state.utkast = { lat: e.latlng.lat, lng: e.latlng.lng, namn: "", text: "" };
+  state.laege = "form";
+  document.getElementById("map").classList.remove("is-placing");
+  document.getElementById("banner").classList.remove("on");
+  if (utkastMarker) map.removeLayer(utkastMarker);
+  utkastMarker = L.marker([e.latlng.lat, e.latlng.lng], {
+    icon: L.divIcon({ className: "", html: '<div class="pin is-draft"></div>', iconSize: [15,15], iconAnchor: [7.5,7.5] })
+  }).addTo(map);
+  render();
+});
+
+function sparaUtkast() {
+  const namn = document.getElementById("f-namn").value.trim();
+  const text = document.getElementById("f-text").value.trim();
+  if (!namn) { document.getElementById("f-namn").focus(); return; }
+  const id = namn.toLowerCase()
+    .replace(/[åä]/g,"a").replace(/ö/g,"o").replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-|-$/g,"") || ("plats-" + Date.now());
+  state.utkast = { ...state.utkast, id, namn, text };
+  state.platser.push(state.utkast);
+  if (utkastMarker) { map.removeLayer(utkastMarker); utkastMarker = null; }
+  state.laege = "emit";
+  ritaMarkers();
+  render();
+}
+
+function avbryt() {
+  if (utkastMarker) { map.removeLayer(utkastMarker); utkastMarker = null; }
+  document.getElementById("map").classList.remove("is-placing");
+  document.getElementById("banner").classList.remove("on");
+  state.utkast = null;
+  state.laege = "index";
+  render();
+}
+
+function snippet(p) {
+  return `{
+  "id": ${JSON.stringify(p.id)},
+  "namn": ${JSON.stringify(p.namn)},
+  "lat": ${p.lat.toFixed(4)},
+  "lng": ${p.lng.toFixed(4)},
+  "text": ${JSON.stringify(p.text)}
+}`;
+}
+
+function kopiera(txt) {
+  const done = () => {
+    const t = document.getElementById("toast");
+    t.classList.add("on");
+    setTimeout(() => t.classList.remove("on"), 1600);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(txt).then(done).catch(done);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    ta.remove(); done();
+  }
+}
+
+/* ---------- render ---------- */
+function render() {
+  const body = document.getElementById("body");
+  const foot = document.getElementById("foot");
+  const eyebrow = document.querySelector(".eyebrow");
+  eyebrow.textContent = `Ingen databas · ${state.platser.length} platser`;
+
+  if (state.laege === "index" || state.laege === "placera") {
+    body.innerHTML = `<ul class="index">` + state.platser.map(p => `
+      <li><button data-go="${p.id}">
+        <span class="nm">${esc(p.namn)}</span>
+        <span class="co">${fmt(p.lat, p.lng)}</span>
+      </button></li>`).join("") + `</ul>`;
+    foot.innerHTML = state.laege === "placera"
+      ? `<button class="btn" data-act="avbryt">Avbryt</button>`
+      : `<button class="btn btn-primary" data-act="ny">+ Ny plats</button>`;
+  }
+
+  if (state.laege === "entry") {
+    const p = state.platser.find(x => x.id === state.vald);
+    body.innerHTML = `<div class="entry">
+      <button class="back" data-act="tillbaka">← Alla platser</button>
+      <h2>${esc(p.namn)}</h2>
+      <p class="coords">${fmt(p.lat, p.lng)}</p>
+      ${esc(p.text).split("\n").filter(Boolean).map(t => `<p>${t}</p>`).join("")}
+    </div>`;
+    foot.innerHTML = `<button class="btn btn-primary" data-act="ny">+ Ny plats</button>`;
+  }
+
+  if (state.laege === "form") {
+    body.innerHTML = `<div class="form">
+      <p class="coords">${fmt(state.utkast.lat, state.utkast.lng)}</p>
+      <label for="f-namn">Plats</label>
+      <input id="f-namn" placeholder="Vad heter stället?" autocomplete="off">
+      <label for="f-text">Texten</label>
+      <textarea id="f-text" placeholder="Vad hände här? Vad ska nästa person veta?"></textarea>
+      <p class="hint">Nålen syns direkt i din webbläsare, men försvinner när du laddar om. Nästa steg klistrar in den permanent.</p>
+    </div>`;
+    foot.innerHTML = `<div class="row">
+      <button class="btn" data-act="avbryt">Avbryt</button>
+      <button class="btn btn-primary" data-act="spara">Skapa nål</button>
+    </div>`;
+    setTimeout(() => document.getElementById("f-namn").focus(), 40);
+  }
+
+  if (state.laege === "emit") {
+    const p = state.utkast;
+    const code = snippet(p);
+    body.innerHTML = `<div class="emit">
+      <h3>Klistra in i platser.json</h3>
+      <p class="hint">Lägg raden sist i listan, committa, pusha. Vercel bygger om på ca 30 sekunder och då ser alla i chatten den.</p>
+      <pre>${esc(code)}</pre>
+    </div>`;
+    foot.innerHTML = `<div class="row">
+      <button class="btn" data-act="tillbaka">Klar</button>
+      <button class="btn btn-primary" data-act="kopiera">Kopiera</button>
+    </div>`;
+    foot.dataset.code = code;
+  }
+}
+
+document.addEventListener("click", e => {
+  const go = e.target.closest("[data-go]");
+  if (go) return visa(go.dataset.go);
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const a = b.dataset.act;
+  if (a === "ny") startaPlacering();
+  if (a === "avbryt") avbryt();
+  if (a === "spara") sparaUtkast();
+  if (a === "tillbaka") { state.vald = null; state.laege = "index"; ritaMarkers(); render(); }
+  if (a === "kopiera") kopiera(document.getElementById("foot").dataset.code);
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && (state.laege === "placera" || state.laege === "form")) avbryt();
+});
+
+ritaMarkers();
+render();
+</script>
+</body>
+</html>
