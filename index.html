@@ -350,18 +350,66 @@
   }
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
+  .grip{display:none}
+
   /* ---------- mobile: panel becomes a sheet ---------- */
   @media (max-width:820px){
-    .shell{flex-direction:column}
-    .mapwrap{height:52dvh;flex:0 0 52dvh}
+    .shell{display:block;position:relative;height:100dvh}
+    .mapwrap{height:100dvh;width:100%}
+
     .panel{
+      position:fixed;
+      left:0;right:0;bottom:0;
       width:100%;
-      flex:1 1 auto;
+      height:76dvh;
+      z-index:1000;
       border-left:0;
       border-top:1px solid var(--deep-3);
+      border-radius:14px 14px 0 0;
+      box-shadow:0 -8px 30px rgba(0,0,0,.5);
+      transform:translateY(calc(100% - 58px));
+      transition:transform .28s cubic-bezier(.32,.72,0,1);
     }
-    .head{padding:16px 18px 14px}
-    .wordmark{font-size:24px}
+    .panel.is-open{transform:translateY(0)}
+
+    .grip{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      width:100%;
+      flex:0 0 58px;
+      height:58px;
+      background:none;
+      border:0;
+      border-bottom:1px solid var(--deep-3);
+      padding:0 18px;
+      color:var(--mist);
+      font-family:var(--mono);
+      font-size:11px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      cursor:pointer;
+      text-align:left;
+    }
+    .grip::before{
+      content:"";
+      position:absolute;
+      top:7px;left:50%;
+      transform:translateX(-50%);
+      width:34px;height:4px;
+      border-radius:2px;
+      background:var(--deep-3);
+    }
+    .grip .chev{
+      margin-left:auto;
+      color:var(--signal);
+      font-size:13px;
+      transition:transform .28s ease;
+    }
+    .panel.is-open .grip .chev{transform:rotate(180deg)}
+    .grip:focus-visible{outline:2px solid var(--sea);outline-offset:-3px}
+
+    .head{display:none}
     .entry,.form,.emit{padding:18px}
     .index button{padding:13px 18px}
   }
@@ -382,7 +430,11 @@
     </div>
   </div>
 
-  <aside class="panel">
+  <aside class="panel" id="panel">
+    <button class="grip" id="grip" aria-expanded="false">
+      <span id="grip-text">Alla platser</span>
+      <span class="chev">▲</span>
+    </button>
     <div class="head">
       <p class="eyebrow">Ingen databas · 6 platser</p>
       <h1 class="wordmark">Var vi <em>varit</em></h1>
@@ -437,14 +489,7 @@ const PLATSER = [
     namn: "San Sebastián",
     lat: 43.3183, lng: -1.9812,
     text: "Pintxos-rundan gick fel väg runt och vi började med den bästa baren först. Lärdom: börja i utkanten och jobba dig inåt mot Parte Vieja."
-  },
-  {
-  "id": "ipswich",
-  "namn": "IPswich",
-  "lat": 52.0584,
-  "lng": 1.1343,
-  "text": "Stuarts hometown"
-}
+  }
 ];
 
 /* --------------------------------------------------------------- */
@@ -536,6 +581,7 @@ function visa(id) {
   map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 6), { duration: .7 });
   ritaMarkers();
   render();
+  if (mobil()) saettArk(true);
 }
 
 /* ---------- lägg till ---------- */
@@ -544,6 +590,7 @@ function startaPlacering() {
   document.getElementById("map").classList.add("is-placing");
   document.getElementById("banner").classList.add("on");
   render();
+  if (mobil()) saettArk(false);
 }
 
 map.on("click", e => {
@@ -557,6 +604,7 @@ map.on("click", e => {
     icon: L.divIcon({ className: "", html: '<div class="pin is-draft"></div>', iconSize: [15,15], iconAnchor: [7.5,7.5] })
   }).addTo(map);
   render();
+  if (mobil()) saettArk(true);
 });
 
 function sparaUtkast() {
@@ -609,12 +657,39 @@ function kopiera(txt) {
   }
 }
 
+/* ---------- mobilarket ---------- */
+const mobil = () => window.matchMedia("(max-width:820px)").matches;
+
+function saettArk(open) {
+  const p = document.getElementById("panel");
+  const g = document.getElementById("grip");
+  p.classList.toggle("is-open", open);
+  g.setAttribute("aria-expanded", String(open));
+  setTimeout(maetOm, 300);
+}
+
+document.getElementById("grip").addEventListener("click", () => {
+  saettArk(!document.getElementById("panel").classList.contains("is-open"));
+});
+
+function gripText() {
+  if (state.laege === "entry") {
+    const p = state.platser.find(x => x.id === state.vald);
+    return p ? p.namn : "Alla platser";
+  }
+  if (state.laege === "form") return "Skriv om platsen";
+  if (state.laege === "emit") return "Klistra in i koden";
+  if (state.laege === "placera") return "Välj plats på kartan";
+  return `Alla platser · ${state.platser.length}`;
+}
+
 /* ---------- render ---------- */
 function render() {
   const body = document.getElementById("body");
   const foot = document.getElementById("foot");
   const eyebrow = document.querySelector(".eyebrow");
   eyebrow.textContent = `Ingen databas · ${state.platser.length} platser`;
+  document.getElementById("grip-text").textContent = gripText();
 
   if (state.laege === "index" || state.laege === "placera") {
     body.innerHTML = `<ul class="index">` + state.platser.map(p => `
