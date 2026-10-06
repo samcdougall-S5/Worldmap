@@ -91,6 +91,15 @@
   /* ---------- index list ---------- */
   .index{list-style:none;margin:0;padding:8px 0}
   .index li{margin:0}
+  .index .land{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--signal);
+    padding:20px 24px 8px;
+    border-bottom:1px solid var(--deep-3);
+  }
   .index button{
     width:100%;
     display:block;
@@ -456,40 +465,63 @@
 const PLATSER = [
   {
     id: "tylosand",
+    land: "Sverige",
     namn: "Tylösand",
     lat: 56.6486, lng: 12.7256,
     text: "Utgångspunkten. Vi har varit här så många gånger att det knappt räknas som en plats längre, mer som ett vardagsrum med sand. Bäst i oktober när alla andra har åkt hem och man har hela stranden för sig själv."
   },
   {
     id: "porto",
+    land: "Portugal",
     namn: "Porto",
     lat: 41.1408, lng: -8.6116,
     text: "Trapporna. Ingen varnade oss för trapporna. I övrigt: fyra dagar, elva restauranger, noll ånger. Vi kom överens om att åka tillbaka i november och sen har vi inte pratat om det sen dess."
   },
   {
     id: "lofoten",
+    land: "Norge",
     namn: "Reine, Lofoten",
     lat: 67.9330, lng: 13.0880,
     text: "Kört i sjutton timmar för att komma hit och sen stod vi bara tysta i en kvart. Det var värt varenda mil. Ta med regnkläder även om prognosen säger något annat, prognosen ljuger här uppe."
   },
   {
     id: "prag",
+    land: "Tjeckien",
     namn: "Prag",
     lat: 50.0875, lng: 14.4213,
     text: "Vi hittade en källarbar utan skylt någonstans bakom Karlsbron och har aldrig lyckats hitta tillbaka dit. Om någon minns gatan, skriv in den här."
   },
   {
     id: "skagen",
+    land: "Danmark",
     namn: "Skagen",
     lat: 57.7208, lng: 10.5836,
     text: "Där två hav möts och man kan stå med en fot i vardera. Turistigt på gränsen till pinsamt, och ändå gjorde vi allihop exakt samma bild."
   },
   {
     id: "sansebastian",
+    land: "Spanien",
     namn: "San Sebastián",
     lat: 43.3183, lng: -1.9812,
     text: "Pintxos-rundan gick fel väg runt och vi började med den bästa baren först. Lärdom: börja i utkanten och jobba dig inåt mot Parte Vieja."
-  }
+  },
+
+  /* Italien */
+  { id: "sicilien",      land: "Italien",   namn: "Sicilien",      lat: 37.6000, lng: 14.0154, text: "" },
+  { id: "puglia",        land: "Italien",   namn: "Puglia",        lat: 40.9500, lng: 16.6000, text: "" },
+  { id: "veneto",        land: "Italien",   namn: "Veneto",        lat: 45.6500, lng: 11.8500, text: "" },
+  { id: "terreno",       land: "Italien",   namn: "Terreno",       lat: 43.5550, lng: 11.3500, text: "" },
+  { id: "chianti",       land: "Italien",   namn: "Chianti",       lat: 43.4700, lng: 11.3000, text: "" },
+  { id: "uga-greve",     land: "Italien",   namn: "UGA of Greve",  lat: 43.5840, lng: 11.3170, text: "" },
+  { id: "montefioralle", land: "Italien",   namn: "Montefioralle", lat: 43.5893, lng: 11.3049, text: "" },
+
+  /* Frankrike */
+  { id: "bourgogne",     land: "Frankrike", namn: "Bourgogne",     lat: 47.0500, lng: 4.8300,  text: "" },
+
+  /* Spanien */
+  { id: "rioja",         land: "Spanien",   namn: "Rioja",         lat: 42.4500, lng: -2.5500, text: "" },
+  { id: "jumilla",       land: "Spanien",   namn: "Jumilla",       lat: 38.4740, lng: -1.3260, text: "" },
+  { id: "mallorca",      land: "Spanien",   namn: "Mallorca",      lat: 39.6150, lng: 2.9900,  text: "" }
 ];
 
 /* --------------------------------------------------------------- */
@@ -609,12 +641,13 @@ map.on("click", e => {
 
 function sparaUtkast() {
   const namn = document.getElementById("f-namn").value.trim();
+  const land = document.getElementById("f-land").value.trim();
   const text = document.getElementById("f-text").value.trim();
   if (!namn) { document.getElementById("f-namn").focus(); return; }
   const id = namn.toLowerCase()
     .replace(/[åä]/g,"a").replace(/ö/g,"o").replace(/[^a-z0-9]+/g,"-")
     .replace(/^-|-$/g,"") || ("plats-" + Date.now());
-  state.utkast = { ...state.utkast, id, namn, text };
+  state.utkast = { ...state.utkast, id, land, namn, text };
   state.platser.push(state.utkast);
   if (utkastMarker) { map.removeLayer(utkastMarker); utkastMarker = null; }
   state.laege = "emit";
@@ -634,6 +667,7 @@ function avbryt() {
 function snippet(p) {
   return `{
   "id": ${JSON.stringify(p.id)},
+  "land": ${JSON.stringify(p.land)},
   "namn": ${JSON.stringify(p.namn)},
   "lat": ${p.lat.toFixed(4)},
   "lng": ${p.lng.toFixed(4)},
@@ -692,11 +726,19 @@ function render() {
   document.getElementById("grip-text").textContent = gripText();
 
   if (state.laege === "index" || state.laege === "placera") {
-    body.innerHTML = `<ul class="index">` + state.platser.map(p => `
+    /* Grupperat per land, i den ordning länderna först dyker upp i listan. */
+    const perLand = new Map();
+    state.platser.forEach(p => {
+      const land = p.land || "Övrigt";
+      if (!perLand.has(land)) perLand.set(land, []);
+      perLand.get(land).push(p);
+    });
+    body.innerHTML = `<ul class="index">` + [...perLand].map(([land, ps]) => `
+      <li class="land">${esc(land)}</li>` + ps.map(p => `
       <li><button data-go="${p.id}">
         <span class="nm">${esc(p.namn)}</span>
         <span class="co">${fmt(p.lat, p.lng)}</span>
-      </button></li>`).join("") + `</ul>`;
+      </button></li>`).join("")).join("") + `</ul>`;
     foot.innerHTML = state.laege === "placera"
       ? `<button class="btn" data-act="avbryt">Avbryt</button>`
       : `<button class="btn btn-primary" data-act="ny">+ Ny plats</button>`;
@@ -718,6 +760,8 @@ function render() {
       <p class="coords">${fmt(state.utkast.lat, state.utkast.lng)}</p>
       <label for="f-namn">Plats</label>
       <input id="f-namn" placeholder="Vad heter stället?" autocomplete="off">
+      <label for="f-land">Land</label>
+      <input id="f-land" placeholder="T.ex. Italien" autocomplete="off">
       <label for="f-text">Texten</label>
       <textarea id="f-text" placeholder="Vad hände här? Vad ska nästa person veta?"></textarea>
       <p class="hint">Nålen syns direkt i din webbläsare, men försvinner när du laddar om. Nästa steg klistrar in den permanent.</p>
