@@ -463,49 +463,6 @@
    Ny plats = ny rad här + commit + push. Vercel bygger om automatiskt.
    ===================================================================== */
 const PLATSER = [
-  {
-    id: "tylosand",
-    land: "Sverige",
-    namn: "Tylösand",
-    lat: 56.6486, lng: 12.7256,
-    text: "Utgångspunkten. Vi har varit här så många gånger att det knappt räknas som en plats längre, mer som ett vardagsrum med sand. Bäst i oktober när alla andra har åkt hem och man har hela stranden för sig själv."
-  },
-  {
-    id: "porto",
-    land: "Portugal",
-    namn: "Porto",
-    lat: 41.1408, lng: -8.6116,
-    text: "Trapporna. Ingen varnade oss för trapporna. I övrigt: fyra dagar, elva restauranger, noll ånger. Vi kom överens om att åka tillbaka i november och sen har vi inte pratat om det sen dess."
-  },
-  {
-    id: "lofoten",
-    land: "Norge",
-    namn: "Reine, Lofoten",
-    lat: 67.9330, lng: 13.0880,
-    text: "Kört i sjutton timmar för att komma hit och sen stod vi bara tysta i en kvart. Det var värt varenda mil. Ta med regnkläder även om prognosen säger något annat, prognosen ljuger här uppe."
-  },
-  {
-    id: "prag",
-    land: "Tjeckien",
-    namn: "Prag",
-    lat: 50.0875, lng: 14.4213,
-    text: "Vi hittade en källarbar utan skylt någonstans bakom Karlsbron och har aldrig lyckats hitta tillbaka dit. Om någon minns gatan, skriv in den här."
-  },
-  {
-    id: "skagen",
-    land: "Danmark",
-    namn: "Skagen",
-    lat: 57.7208, lng: 10.5836,
-    text: "Där två hav möts och man kan stå med en fot i vardera. Turistigt på gränsen till pinsamt, och ändå gjorde vi allihop exakt samma bild."
-  },
-  {
-    id: "sansebastian",
-    land: "Spanien",
-    namn: "San Sebastián",
-    lat: 43.3183, lng: -1.9812,
-    text: "Pintxos-rundan gick fel väg runt och vi började med den bästa baren först. Lärdom: börja i utkanten och jobba dig inåt mot Parte Vieja."
-  },
-
   /* Italien */
   { id: "sicilien",      land: "Italien",   namn: "Sicilien",      lat: 37.6000, lng: 14.0154, text: "" },
   { id: "puglia",        land: "Italien",   namn: "Puglia",        lat: 40.9500, lng: 16.6000, text: "" },
@@ -533,7 +490,7 @@ const esc = s => s.replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",
 const state = { platser: [...PLATSER], vald: null, laege: "index", utkast: null };
 
 const map = L.map("map", { zoomControl: true, worldCopyJump: true })
-  .setView([54.5, 6], 4);
+  .setView([43, 7], 5);
 
 /* Leaflet mäter containern vid start. Ligger den i flex hinner den ibland
    mätas till 0px hög, och då ritas inga rutor alls. invalidateSize tvingar
